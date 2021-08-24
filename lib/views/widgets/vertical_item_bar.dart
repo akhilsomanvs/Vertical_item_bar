@@ -2,44 +2,73 @@ import 'package:flutter/material.dart';
 import 'package:vertical_item_bar/utils/size_config.dart';
 
 //region Widget
-class VerticalItemBar extends StatelessWidget {
-  late Offset tapPosition;
-
+class VerticalItemBar extends StatefulWidget {
   VerticalItemBar({Key? key, required this.itemList}) : super(key: key);
   final List itemList;
+
+  @override
+  _VerticalItemBarState createState() => _VerticalItemBarState();
+}
+
+class _VerticalItemBarState extends State<VerticalItemBar> {
   late double pointerWidth;
+  Offset? positionToPaint;
 
   @override
   Widget build(BuildContext context) {
     pointerWidth = SizeConfig.getVerticalSize(24);
+    // if (itemCenterOffset != null) {
+    //   final RenderBox box = context.findRenderObject() as RenderBox;
+    //   positionToPaint = box.localToGlobal(itemCenterOffset!);
+    // positionToPaint = itemCenterOffset;
+    // }
     return CustomPaint(
-      painter: ItemPointerPainter(),
+      painter: ItemPointerPainter(positionToPaint),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: List.generate(
-          itemList.length,
-          (index) => _getItemWidget(context, itemList[index]),
+          widget.itemList.length,
+          (index) => _ItemWidget(
+            item: widget.itemList[index],
+            pointerWidth: pointerWidth,
+            onTap: (globalTapPosition) {
+              final RenderBox box = context.findRenderObject() as RenderBox;
+              setState(() {
+                positionToPaint = Offset(0,box.globalToLocal(globalTapPosition).dy);
+              });
+            },
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _getItemWidget(BuildContext context, VerticalItem item) {
+class _ItemWidget extends StatelessWidget {
+  Function(Offset) onTap;
+  VerticalItem item;
+  double pointerWidth;
+
+  _ItemWidget({Key? key, required this.onTap, required this.item, required this.pointerWidth}) : super(key: key);
+  late Offset tapPositionGlobal;
+
+  Offset? itemCenterOffset;
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
-        if (tapPosition != null) {
+        if (tapPositionGlobal != null) {
           final RenderBox box = context.findRenderObject() as RenderBox;
-          final Offset localOffset = box.globalToLocal(tapPosition);
-          debugPrint("POSITION Center :::::: ${localOffset}");
+          onTap(box.localToGlobal(box.paintBounds.center));
         }
         if (item.onTap != null) {
           item.onTap!();
         }
       },
       onTapUp: (tapUpDetail) {
-        debugPrint("POSITION ::::: tapUp ${tapUpDetail.globalPosition}");
-        tapPosition = tapUpDetail.globalPosition;
+        tapPositionGlobal = tapUpDetail.globalPosition;
       },
       child: Padding(
         padding: EdgeInsets.only(
@@ -61,8 +90,18 @@ class VerticalItemBar extends StatelessWidget {
 
 //region Painter
 class ItemPointerPainter extends CustomPainter {
+  late Offset? paintPosition;
+
+  ItemPointerPainter(this.paintPosition);
+
+  Paint pointerPaint = Paint()..color = Colors.black;
+
   @override
-  void paint(Canvas canvas, Size size) {}
+  void paint(Canvas canvas, Size size) {
+    if (paintPosition != null) {
+      canvas.drawCircle(paintPosition!, 8, pointerPaint);
+    }
+  }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
