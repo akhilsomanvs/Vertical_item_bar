@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:vertical_item_bar/utils/size_config.dart';
 
@@ -11,8 +13,34 @@ class VerticalItemBar extends StatefulWidget {
   _VerticalItemBarState createState() => _VerticalItemBarState();
 }
 
-class _VerticalItemBarState extends State<VerticalItemBar> {
+class _VerticalItemBarState extends State<VerticalItemBar> with SingleTickerProviderStateMixin {
   Offset? positionToPaint;
+  Offset? destPosition;
+  late AnimationController animationController;
+  int previousClickedItemIndex = 0;
+  List<GlobalKey> keyList = [];
+  double changeInPosition = 0;
+
+  @override
+  void initState() {
+    for (int i = 0; i < widget.itemList.length; i++) {
+      this.keyList.add(GlobalKey(debugLabel: "$i"));
+    }
+    animationController = AnimationController(vsync: this, duration: Duration(milliseconds: 250))
+      ..addListener(() {
+        setState(() {
+          if (animationController.status != AnimationStatus.dismissed) {
+            // changinPosition = lerpDouble(a, b, t);
+          }
+        });
+      })
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          animationController.reset();
+        }
+      });
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,18 +49,21 @@ class _VerticalItemBarState extends State<VerticalItemBar> {
       child: CustomPaint(
         painter: ItemPointerPainter(positionToPaint, pointerWidth),
         child: Container(
-          // width: SizeConfig.getHorizontalSize(64),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: List.generate(
               widget.itemList.length,
               (index) => _ItemWidget(
+                key: this.keyList[index],
                 item: widget.itemList[index],
                 pointerWidth: pointerWidth,
                 onTap: (globalTapPosition) {
                   final RenderBox box = context.findRenderObject() as RenderBox;
                   setState(() {
-                    positionToPaint = Offset(0, box.globalToLocal(globalTapPosition).dy);
+                    destPosition = Offset(0, box.globalToLocal(globalTapPosition).dy);
+                    // animationController.forward();
+                    // this.prevPositionToPaint = positionToPaint;
+                    // this.previousClickedItemIndex = index;
                   });
                 },
               ),
@@ -105,7 +136,7 @@ class ItemPointerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (paintPosition != null) {
-      final double height = size.width * 0.25; // 25%
+      final double height = pointerWidth * 0.25; // 25%
       final double width = pointerWidth * 0.7; // 70%
       //
       //Draw pointer
