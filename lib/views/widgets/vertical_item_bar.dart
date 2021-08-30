@@ -16,19 +16,19 @@ class _VerticalItemBarState extends State<VerticalItemBar> {
 
   @override
   Widget build(BuildContext context) {
+    double pointerWidth = SizeConfig.getHorizontalSize(48);
     return ClipRect(
       child: CustomPaint(
-        painter: ItemPointerPainter(positionToPaint),
-        isComplex: true,
+        painter: ItemPointerPainter(positionToPaint, pointerWidth),
         child: Container(
-          // color: Colors.red,
-          width: SizeConfig.getHorizontalSize(64),
+          // width: SizeConfig.getHorizontalSize(64),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: List.generate(
               widget.itemList.length,
               (index) => _ItemWidget(
                 item: widget.itemList[index],
+                pointerWidth: pointerWidth,
                 onTap: (globalTapPosition) {
                   final RenderBox box = context.findRenderObject() as RenderBox;
                   setState(() {
@@ -47,11 +47,13 @@ class _VerticalItemBarState extends State<VerticalItemBar> {
 class _ItemWidget extends StatelessWidget {
   Function(Offset) onTap;
   VerticalItem item;
+  double pointerWidth;
 
   _ItemWidget({
     Key? key,
     required this.onTap,
     required this.item,
+    required this.pointerWidth,
   }) : super(key: key);
   late Offset tapPositionGlobal;
 
@@ -73,23 +75,17 @@ class _ItemWidget extends StatelessWidget {
       onTapUp: (tapUpDetail) {
         tapPositionGlobal = tapUpDetail.globalPosition;
       },
-      child: Row(
-        children: [
-          Expanded(child: Container()),
-          Container(
-            // color: Colors.white,
-            padding: EdgeInsets.only(
-              left: 0,
-              top: SizeConfig.getVerticalSize(12),
-              right: SizeConfig.getVerticalSize(12),
-              bottom: SizeConfig.getVerticalSize(12),
-            ),
-            child: RotatedBox(
-              quarterTurns: 3,
-              child: Text(item.itemTitle),
-            ),
-          ),
-        ],
+      child: Container(
+        padding: EdgeInsets.only(
+          left: pointerWidth,
+          top: SizeConfig.getVerticalSize(12),
+          right: SizeConfig.getVerticalSize(12),
+          bottom: SizeConfig.getVerticalSize(12),
+        ),
+        child: RotatedBox(
+          quarterTurns: 3,
+          child: Text(item.itemTitle),
+        ),
       ),
     );
   }
@@ -100,22 +96,20 @@ class _ItemWidget extends StatelessWidget {
 //region Painter
 class ItemPointerPainter extends CustomPainter {
   late Offset? paintPosition;
+  late double pointerWidth;
 
-  ItemPointerPainter(this.paintPosition);
+  ItemPointerPainter(this.paintPosition, this.pointerWidth);
 
   Paint pointerPaint = Paint()..color = Colors.black;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (paintPosition != null) {
-      canvas.drawCircle(paintPosition!, 8, pointerPaint);
-      canvas.drawColor(Colors.green, BlendMode.src);
       final double height = size.width * 0.25; // 25%
-      final double width = size.width * 0.7; // 70%
+      final double width = pointerWidth * 0.7; // 70%
       //
       //Draw pointer
       //
-      print("Size ::::: ${size}Height :::: $height __ Width :::: $width");
       final Offset topPoint = Offset(paintPosition!.dx, paintPosition!.dy - height);
       final Offset bottomPoint = Offset(paintPosition!.dx, paintPosition!.dy + height);
       final Offset rightPoint = Offset(paintPosition!.dx + width, paintPosition!.dy);
@@ -123,15 +117,22 @@ class ItemPointerPainter extends CustomPainter {
       Path path = Path()
         ..moveTo(paintPosition!.dx, paintPosition!.dy)
         ..lineTo(topPoint.dx, topPoint.dy)
-        ..lineTo(rightPoint.dx, rightPoint.dy)
-        /*..cubicTo(
+        ..cubicTo(
           topPoint.dx + (width * 0.4),
-          topPoint.dy - (height * 0.1),
-          rightPoint.dx - (width * 0.4),
-          rightPoint.dy + (height * 0.5),
+          topPoint.dy + (height * 0.8),
+          rightPoint.dx - (width * 0.1),
+          rightPoint.dy - (height * 0.6),
           rightPoint.dx,
           rightPoint.dy,
-        )*/
+        )
+        ..cubicTo(
+          rightPoint.dx - (width * 0.1),
+          rightPoint.dy + (height * 0.6),
+          bottomPoint.dx + (width * 0.4),
+          bottomPoint.dy - (height * 0.8),
+          bottomPoint.dx,
+          bottomPoint.dy,
+        )
         ..close();
       canvas.drawPath(path, pointerPaint);
     }
